@@ -22,6 +22,9 @@ def annotate_image(img, model, save_path, th=0.5):
     label_save_path = save_path + ".txt"
     img_w, img_h = img.shape[1], img.shape[0]
 
+    # Save the image
+    cv2.imwrite(image_save_path, img)
+
     results = model(img)
 
     df = results.pandas().xyxy[0]
@@ -44,9 +47,6 @@ def annotate_image(img, model, save_path, th=0.5):
     cv2.imshow("image", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
-    # Save the image
-    cv2.imwrite(image_save_path, img)
 
     # Create the label
     for coord in coordinates:
@@ -98,23 +98,29 @@ def create_dataset(
     videos = [x for x in videos if "mp4" in x]
 
     os.makedirs(save_dir, exist_ok=True)
-    counter = len(os.listdir(save_dir)) + 1
+    # counter = len(os.listdir(save_dir)) + 1
 
     while True:
-        video = os.path.join(dir, videos.pop())
-        video = cv2.VideoCapture(video)
+        video_name = videos.pop()
+        video_path = os.path.join(dir, video_name)
+        video = cv2.VideoCapture(video_path)
         fps = video.get(cv2.CAP_PROP_FPS)
 
         total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
         cnt = 0
+        counter = len([x for x in os.listdir(save_dir) if video_name in x]) + 1
         while True:
             frame_exists, frame = video.read()
             if not frame_exists:
                 break
 
             if cnt % frame_interval == 0:
-                annotate_image(frame, model, os.path.join(save_dir, str(counter)))
+                annotate_image(
+                    frame,
+                    model,
+                    os.path.join(save_dir, video_name + "_" + str(counter)),
+                )
                 counter += 1
 
             cnt += 1
@@ -143,7 +149,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     create_dataset(args.dir, args.save_dir)
-
-    # os.system(
-    #     "python 2_referee-detection_TH/03_Data_Generation/yolov7/detect.py --source /Users/tim/CS_master/Data_Science_Project/dataset/ExampleFrames/Bernau-Wolmirstedt.png --img-size 1920 --weights 2_referee-detection_TH/03_Data_Generation/yolov7/yolov7.pt --conf 0.25 --save"
-    # )
